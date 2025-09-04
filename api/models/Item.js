@@ -1,18 +1,23 @@
 import { model, Schema } from "mongoose";
 
+const VarianceSchema = new Schema({
+  color: { type: String, required: false },
+  image: [{ type: String }], // เก็บ URL ของรูปสินค้า
+  stock: { type: Number, default: 0 },
+  price: { type: Number, default: 0 },
+});
+
 const ItemScheme = new Schema(
   {
-    productname: { type: String, required: true },
-    description: { type: String, default: "" },
-    price: { type: Number, default: 0, required: true },
-    image: { type: String, default: "" },
-    color: { type: [String, Number], default: ["white", 0] },
-    stock: { type: Number, default: 0, required: true },
-    brand: { type: String, default: "" },
-    features: { type: [String], default: [] },
-    modelname: { type: String, default: "" },
-    warrantyinfo: { type: [String, Number], default: [" ", 0] },
-    relatedproduct: { type: [String], default: [] }, //to show other items that user might interest
+    category: { type: String, required: true },
+    productname: { type: String, required: true, trim: true },
+    description: { type: String, required: false },
+    brand: { type: String, required: false },
+    modelname: { type: String, required: false },
+    warrantyinfo: { type: String, required: false },
+    relatedproduct: [{ type: String }], // ถ้าอยาก reference ไปที่ Item อื่น ใช้ ObjectId
+    features: [{ type: String }],
+    variances: [VarianceSchema], // array ของ objects (สี, รูป, stock, price)
   },
   { timestamps: true } //use this one because it's show a create time and edit time
 );

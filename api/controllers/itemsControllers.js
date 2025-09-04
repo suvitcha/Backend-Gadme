@@ -1,6 +1,7 @@
 //createItem
 export const createItem = async (req, res, next) => {
   const {
+    category,
     productname,
     description,
     price,
