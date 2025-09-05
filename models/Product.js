@@ -8,9 +8,10 @@ const ProductScheme = new Schema(
     brand: { type: String, required: false },
     modelname: { type: String, required: false },
     warrantyinfo: { type: String, required: false },
-    relatedproduct: [{ type: String }], // ถ้าอยาก reference ไปที่ Item อื่น ใช้ ObjectId
-    features: [{ type: String }],
-  } //use this one because it's show a create time and edit time
+    relatedproduct: [{ type: String, required: false }], // ถ้าอยาก reference ไปที่ Item อื่น ใช้ ObjectId
+    features: [{ type: String, required: false }],
+  },
+  { timestamps: true } //use this one because it's show a create time and edit time
 );
 
 export const Product = model("Product", ProductScheme);

@@ -6,7 +6,7 @@ export const createItem = async (req, res, next) => {
     description,
     price,
     image,
-    color = [],
+    color,
     stock,
     brand,
     features = [],
