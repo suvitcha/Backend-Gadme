@@ -2,7 +2,11 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import { connectMongo } from "./config/mongo";
+import { connectMongo } from "./config/mongo.js";
+import apiRoutes from "./api/routes/routes.js"
+import helmet from "helmet";
+import limiter from "./middleware/rateLimiter.js";
+import errorHandler from "./middleware/errorHandler.js";
 
 dotenv.config();
 
@@ -30,6 +34,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Centralized routes
+app.use("/", apiRoutes());
 app.get("/", (_req, res) => {
   res.send(`
       <!DOCTYPE html>
