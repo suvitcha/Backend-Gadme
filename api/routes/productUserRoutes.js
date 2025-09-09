@@ -1,10 +1,15 @@
 import express from "express";
 
-import { getAllProductsByName } from "../controllers/productsUserControllers.js";
+import {
+  getProductsByName,
+  getAllProducts,
+} from "../controllers/productsUserControllers.js";
 
 const router = express.Router();
 
-router.get("/productsuser", getAllProductsByName);
+router.get("/productdetail", getProductsByName);
+
+router.get("/productlist", getAllProducts);
 
 // router.get("/", (_req, res, next) => {
 //   try {
