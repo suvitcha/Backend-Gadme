@@ -21,18 +21,18 @@ export const getAllProducts = async (_req, res) => {
 //createProduct
 export const createProduct = async (req, res, next) => {
   const {
-    category,
-    productname,
-    description,
-    brand,
-    warrantyinfo,
-    relatedproduct,
+    product_category,
+    product_name,
+    product_description,
+    product_brand,
+    product_warrantyinfo,
+    product_relatedproduct,
   } = req.body;
 
   const userId = req.user.user._id; // Logged-in user's MongoDB _id will lock with Admin's id only
 
   //Validate data before create
-  if (!category || !productname) {
+  if (!product_category || !product_name) {
     const error = new Error(
       "Required field still empty. Please fill the required field before try again"
     );
@@ -49,12 +49,12 @@ export const createProduct = async (req, res, next) => {
 
   try {
     const product = await Product.create({
-      category,
-      productname,
-      description,
-      brand,
-      warrantyinfo,
-      relatedproduct,
+      product_category,
+      product_name,
+      product_description,
+      product_brand,
+      product_warrantyinfo,
+      product_relatedproduct,
       userId, //recorded a userId of who create the product
     });
 
@@ -74,12 +74,12 @@ export const createProduct = async (req, res, next) => {
 
 //createVariance
 export const createVariance = async (req, res, next) => {
-  const { color, image, stock, price } = req.body;
+  const { variance_color, variance_optional, variance_stock, variance_price } = req.body;
   const userId = req.user.user._id; // Logged-in user's MongoDB _id will lock with Admin's id only
   const productId = req.product.product._id; // Product's MongoDB _id
 
   //Validate data before create a variance
-  if (!stock || !price) {
+  if ( !variance_stock || !variance_price ) {
     const error = new Error(
       "Required field still empty. Please fill the required field before try again"
     );
@@ -102,10 +102,7 @@ export const createVariance = async (req, res, next) => {
 
   try {
     const variance = await Variance.create({
-      color,
-      image,
-      stock,
-      price,
+variance_color, variance_optional, variance_stock, variance_price ,
       userId, //recorded a userId of who create the product
     });
 
@@ -127,41 +124,97 @@ export const createVariance = async (req, res, next) => {
 export const editProduct = async (req, res, next) => {
   const productId = req.params.productId;
   const {
-    category,
-    productname,
-    description,
-    brand,
-    modelname,
-    warrantyinfo,
-    relatedproduct,
-    features,
+    product_category,
+    product_name,
+    product_description,
+    product_brand,
+    product_modelname,
+    product_warrantyinfo,
+    product_relatedproduct,
+    product_features,
   } = req.body;
   const { user } = req.user;
 
-  if (!title && !content && !tags) {
+  if (!product_category && !product_name ) {
     return res
       .status(400)
       .json({ error: true, message: "No changes provided" });
   }
 
-  // try {
-  //   const note = await Note.findOne({ _id: noteId, userId: user._id });
+   try {
+     const product = await Product.findOne({ _id: productId, userId: user._id }); //the userId is need because it's Admin only that able to edit
 
-  //   if (!note) {
-  //     return res.status(404).json({ error: true, message: "Note not found" });
+    if (!product) {
+      return res.status(404).json({ error: true, message: "Product not found" });
+    }
+
+    if (product_category) product.product_category = product_category;
+    if (product_name) product.product_name = product_name;
+    if (product_description) product.product_description = product_description;
+    if (product_brand) product.product_brand = product_brand;
+    if (product_modelname) product.product_modelname = product_modelname;
+    if (product_warrantyinfo) product.product_warrantyinfo = product_warrantyinfo;
+    if (product_relatedproduct) product.product_relatedproduct = product_relatedproduct;
+    if (product_features) product.product_features = product_features;
+
+    await product.save();
+
+    return res.json({
+      error: false,
+     product,
+      message: "Product updated successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+//editVariance
+export const editVariance = async (req, res, next) => {
+  // const productId = req.params.productId;
+  // const {
+  //   product_category,
+  //   product_name,
+  //   product_description,
+  //   product_brand,
+  //   product_modelname,
+  //   product_warrantyinfo,
+  //   product_relatedproduct,
+  //   product_features,
+  // } = req.body;
+  // const { user } = req.user;
+
+  // if (!product_category && !product_name ) {
+  //   return res
+  //     .status(400)
+  //     .json({ error: true, message: "No changes provided" });
+  // }
+
+  //  try {
+  //    const product = await Product.findOne({ _id: productId, userId: user._id }); //the userId is need because it's Admin only that able to edit
+
+  //   if (!product) {
+  //     return res.status(404).json({ error: true, message: "Product not found" });
   //   }
 
-  //   if (title) note.title = title;
-  //   if (content) note.content = content;
-  //   if (tags) note.tags = tags;
-  //   if (isPinned) note.isPinned = isPinned;
+  //   if (product_category) product.product_category = product_category;
+  //   if (product_name) product.product_name = product_name;
+  //   if (product_description) product.product_description = product_description;
+  //   if (product_brand) product.product_brand = product_brand;
+  //   if (product_modelname) product.product_modelname = product_modelname;
+  //   if (product_warrantyinfo) product.product_warrantyinfo = product_warrantyinfo;
+  //   if (product_relatedproduct) product.product_relatedproduct = product_relatedproduct;
+  //   if (product_features) product.product_features = product_features;
 
-  //   await note.save();
+  //   await product.save();
 
   //   return res.json({
   //     error: false,
-  //     note,
-  //     message: "Note updated successfully",
+  //    product,
+  //     message: "Product updated successfully",
   //   });
   // } catch (error) {
   //   return res.status(500).json({

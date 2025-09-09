@@ -3,12 +3,12 @@ import bcrypt from "bcrypt";
 
 const UserSchema = new Schema(
   {
-    name: { type: String, require: true },
-    lastname: { type: String, require: true },
-    username: { type: String, default: "" },
-    email: { type: String, require: true },
-    password: { type: String, require: true },
-    cfpassword: { type: String, require: true },
+    user_name: { type: String, require: true },
+    user_lastname: { type: String, require: true },
+    user_username: { type: String, default: "" },
+    user_email: { type: String, require: true },
+    user_password: { type: String, require: true },
+    user_cfpassword: { type: String, require: true },
   },
   { timestamps: true }
 );
