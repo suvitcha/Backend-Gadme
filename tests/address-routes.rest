@@ -1,0 +1,53 @@
+### Get address for logged-in user
+GET http://localhost:3000/address
+# Cookie: accessToken=
+
+### Create new address
+POST http://localhost:3000/address
+# Cookie: accessToken=
+Content-Type: application/json
+
+{
+  "firstname": "Conan",
+  "lastname": "Edogawa",
+  "phonenumber": "03-XXXX-XXXX",
+  "roomnumber": "2F",
+  "floor": "2",
+  "buildingname": "Mouri Detective Agency",
+  "housenumber": "22",
+  "villagenumber": "",
+  "villagename": "",
+  "alley": "",
+  "road": "Beika Street",
+  "subdistrict": "Beika Town",
+  "district": "Beika Ward",
+  "province": "Tokyo",
+  "postalcode": "152-0035"
+}
+
+### Update a note
+PATCH http://localhost:3000/address/68bd7af2cf02e16273f83f50
+# Cookie: accessToken=
+Content-Type: application/json
+
+{
+  "firstname": "",
+  "lastname": "",
+  "phonenumber": "",
+  "roomnumber": "",
+  "floor": "",
+  "buildingname": "Teito Building",
+  "housenumber": "",
+  "villagenumber": "",
+  "villagename": "",
+  "alley": "",
+  "road": "",
+  "subdistrict": "",
+  "district": "",
+  "province": "",
+  "postalcode": ""
+}
+
+### Delete a note
+DELETE http://localhost:3000/address/68bd7aa9cf02e16273f83f44
+# Cookie: accessToken=
