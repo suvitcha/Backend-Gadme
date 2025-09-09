@@ -1,8 +1,11 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import { connectMongo } from "./config/mongo";
+import { connectMongo } from "./config/mongo.js";
+import limiter from "./middleware/rateLimiter.js";
+import errorHandler from "./middleware/errorHandler.js";
 
 dotenv.config();
 
@@ -19,7 +22,7 @@ const corsOptions = {
     "http://localhost:5174",
     "http://localhost:5175",
     "https://gadme-ecommerce-frontend-3lhhy4u1s.vercel.app",
-  ],
+  ], // frontend domain
   credentials: true,
 };
 
