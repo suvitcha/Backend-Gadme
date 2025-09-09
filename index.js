@@ -1,11 +1,11 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { connectMongo } from "./config/mongo.js";
 import limiter from "./middleware/rateLimiter.js";
 import errorHandler from "./middleware/errorHandler.js";
+import helmet from "helmet";
 
 dotenv.config();
 
