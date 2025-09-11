@@ -1,5 +1,6 @@
 import express from "express";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { getAllUsers } from "../controllers/usersControllers";
 import { User } from "../models/User";
 
@@ -53,7 +54,7 @@ router.post("/auth/signup", async (req, res) => {
 });
 
 //login a user - jwt signed token
-router.post("auth/login", async (req, res) => {
+router.post("/auth/login", async (req, res) => {
   const { user_email, user_password } = req.body;
 
   if (!user_email || !user_password) {
@@ -164,7 +165,7 @@ router.get("/auth/profile", authUser, async (req, res) => {
 });
 
 //Logout user - clear cookie
-router.post("/authlogout", (req, res) => {
+router.post("/auth/logout", (req, res) => {
   res.clearCookie("accessToken", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -175,7 +176,7 @@ router.post("/authlogout", (req, res) => {
 
 // Verify JWT token
 router.get("/auth/verify", (req, res) => {
-  const token = req.header.authorization?.split(" ")[1];
+  const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
     return res.status(401).json({ error: true, message: "Token is required" });
   }
