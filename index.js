@@ -35,6 +35,7 @@ app.use(cookieParser());
 
 app.use("/", productUserRoutes);
 // Centralized routes
+app.use("/", apiRoutes());
 app.get("/", (_req, res) => {
   res.send(`
       <!DOCTYPE html>
