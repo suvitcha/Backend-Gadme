@@ -10,6 +10,8 @@ const UserSchema = new Schema(
     user_password: { type: String, require: true },
     user_cfpassword: { type: String, require: true },
     user_role: { type: String, enum: ["User", "Admin"], default: "User" },
+    user_image: { type: String},
+    
     user_cart: [
       {
         product_id: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
