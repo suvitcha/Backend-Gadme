@@ -31,8 +31,8 @@ const UserSchema = new Schema(
 
 //Hash password before saving to DB
 UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 10);
+  if (!this.isModified("user_password")) return next();
+  this.user_password = await bcrypt.hash(this.user_password, 10);
   next();
 });
 

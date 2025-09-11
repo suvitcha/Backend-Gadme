@@ -1,10 +1,10 @@
-import { User } from "../models/User";
+import { User } from "../../models/Users";
 
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
       .select("-user_password")
-      .sort({ createdAt: -1 });
+      .sort({ "-createdAt": -1 });
     res.json({ error: false, users });
   } catch (err) {
     res.status(500).json({

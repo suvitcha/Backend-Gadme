@@ -1,0 +1,24 @@
+### Admin User Route - Get all users
+GET http://localhost:3030/users
+
+### Admin User - Create a new user
+POST http://localhost:3030/users
+Content-Type: application/json
+
+{
+  "email": "betty@example.com",
+  "password": "P@ssw0rd!",
+}
+
+### User route - Signup a new user
+POST http://localhost:3030/auth/signup
+Content-Type: application/json
+
+{
+  "user_name": "james",
+  "user_lastname": "carter",
+  "user_username": "C@rter123",
+  "user_email": "james@example.com",
+  "user_password": "123456789"
+}
+

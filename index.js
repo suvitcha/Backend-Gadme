@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { connectMongo } from "./config/mongo.js";
+import apiRoutes from "./api/routes/routes.js";
+import helmet from "helmet";
 import limiter from "./middleware/rateLimiter.js";
 import errorHandler from "./middleware/errorHandler.js";
 
@@ -33,6 +35,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Centralized routes
+app.use("/", apiRoutes());
 app.get("/", (_req, res) => {
   res.send(`
       <!DOCTYPE html>
