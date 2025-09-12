@@ -6,6 +6,7 @@ import { connectMongo } from "./config/mongo.js";
 import apiRoutes from "./api/routes/routes.js";
 import limiter from "./middleware/rateLimiter.js";
 import errorHandler from "./middleware/errorHandler.js";
+import helmet from "helmet";
 
 dotenv.config();
 
