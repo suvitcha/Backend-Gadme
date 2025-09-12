@@ -1,59 +1,26 @@
 import express from "express";
 import bcrypt from "bcrypt";
-import { getAllUsers } from "../controllers/usersControllers";
-import { User } from "../models/User";
+import jwt from "jsonwebtoken";
+import { User } from "../../models/User.js";
+import {
+  createUser,
+  getAllUsers,
+  signupUser,
+} from "../controllers/usersControllers.js";
+import { authUser } from "../../middleware/auth.js";
 
 const router = express.Router();
 
 //Get all users
 router.get("/users", getAllUsers);
 //Post a user
-router.post("/users", getAllUsers);
+router.post("/users", createUser);
 
 //signup a new user
-router.post("/auth/signup", async (req, res) => {
-  const { user_name, user_lastname, user_username, user_email, user_password } =
-    req.body;
-
-  if (
-    !user_name ||
-    !user_lastname ||
-    !user_username ||
-    !user_email ||
-    !user_password
-  ) {
-    return res
-      .status(400)
-      .json({ error: true, message: "All fields are required" });
-  }
-
-  try {
-    const existingUser = await User.findOne({ user_email });
-    if (existingUser) {
-      return res
-        .status(409)
-        .json({ error: true, message: "Email already in use" });
-    }
-
-    const user = new User({
-      user_name,
-      user_lastname,
-      user_username,
-      user_email,
-      user_password,
-    });
-    await user.save();
-  } catch (err) {
-    return res.status(500).json({
-      error: true,
-      message: "server error",
-      details: err.message,
-    });
-  }
-});
+router.post("/auth/signup", signupUser);
 
 //login a user - jwt signed token
-router.post("auth/login", async (req, res) => {
+router.post("/auth/login", async (req, res) => {
   const { user_email, user_password } = req.body;
 
   if (!user_email || !user_password) {
@@ -92,9 +59,11 @@ router.post("auth/login", async (req, res) => {
 
 //Login a user - jwt signed token
 router.post("/auth/cookie/login", async (req, res) => {
+  console.log(">>> HIT /auth/cookie/login - body:", req.body);
   const { user_email, user_password } = req.body;
 
   if (!user_email || !user_password) {
+    console.log("Missing email/password", req.body);
     return res
       .status(400)
       .json({ error: true, message: "Email and Password are required" });
@@ -102,6 +71,7 @@ router.post("/auth/cookie/login", async (req, res) => {
 
   try {
     const user = await User.findOne({ user_email });
+    console.log("Found user:", !!user, user?._id);
     if (!user) {
       return res
         .status(401)
@@ -154,6 +124,7 @@ router.post("/auth/cookie/login", async (req, res) => {
   }
 });
 
+// GET Current User Profile (protected route)
 router.get("/auth/profile", authUser, async (req, res) => {
   const user = await User.findById(req.user.userId).select("-user_password");
   if (!user) {
@@ -164,7 +135,7 @@ router.get("/auth/profile", authUser, async (req, res) => {
 });
 
 //Logout user - clear cookie
-router.post("/authlogout", (req, res) => {
+router.post("/auth/logout", (req, res) => {
   res.clearCookie("accessToken", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -175,7 +146,8 @@ router.post("/authlogout", (req, res) => {
 
 // Verify JWT token
 router.get("/auth/verify", (req, res) => {
-  const token = req.header.authorization?.split(" ")[1];
+  const token = req.headers.authorization?.split(" ")[1];
+
   if (!token) {
     return res.status(401).json({ error: true, message: "Token is required" });
   }

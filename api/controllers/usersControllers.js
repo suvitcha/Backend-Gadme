@@ -1,4 +1,7 @@
-import { User } from "../models/User";
+
+
+import { User } from "../../models/User.js";
+
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -17,6 +20,7 @@ export const getAllUsers = async (req, res) => {
 export const createUser = async (req, res) => {
   const { user_name, user_lastname, user_username, user_email, user_password } =
     req.body;
+
 
   if (!user_name) {
     return res.status(400).json({ error: true, message: "Name is required" });
@@ -70,5 +74,51 @@ export const createUser = async (req, res) => {
     return res
       .status(500)
       .json({ error: true, message: "server error", details: err.message });
+
+  }
+};
+
+//signup a new user
+export const signupUser = async (req, res) => {
+  const { user_name, user_lastname, user_username, user_email, user_password } =
+    req.body;
+
+  if (
+    !user_name ||
+    !user_lastname ||
+    !user_username ||
+    !user_email ||
+    !user_password
+  ) {
+    return res
+      .status(400)
+      .json({ error: true, message: "All fields are required" });
+  }
+
+  try {
+    const existingUser = await User.findOne({ user_email });
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ error: true, message: "Email already in use" });
+    }
+
+    const user = new User({
+      user_name,
+      user_lastname,
+      user_username,
+      user_email,
+      user_password,
+    });
+    await user.save();
+
+    res.status(201).json({ error: false, message: "User signup successfully" });
+  } catch (err) {
+    return res.status(500).json({
+      error: true,
+      message: "server error",
+      details: err.message,
+    });
+
   }
 };
