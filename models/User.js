@@ -1,6 +1,7 @@
 import mongoose, { Schema, model } from "mongoose";
 import bcrypt from "bcrypt";
 
+
 const CartSchema = new Schema(
   {
     product_id: {
@@ -47,15 +48,18 @@ const UserSchema = new Schema(
     user_image: { type: String, default: null },
     user_cart: { type: [CartSchema], default: [] },
     user_addresses: { type: [AddressSchema], default: [] },
+
   },
   { timestamps: true }
 );
 
 //Hash password before saving to DB
 UserSchema.pre("save", async function (next) {
+
   if (!this.isModified("user_password")) return next();
   this.user_password = await bcrypt.hash(this.user_password, 10);
   next();
 });
 
 export const User = model("User", UserSchema, "user");
+
