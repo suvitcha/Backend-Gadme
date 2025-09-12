@@ -9,6 +9,7 @@ import {
 } from "../controllers/usersControllers.js";
 import { authUser } from "../../middleware/auth.js";
 
+
 const router = express.Router();
 
 //Get all users
@@ -21,6 +22,7 @@ router.post("/auth/signup", signupUser);
 
 //login a user - jwt signed token
 router.post("/auth/login", async (req, res) => {
+
   const { user_email, user_password } = req.body;
 
   if (!user_email || !user_password) {
@@ -124,6 +126,7 @@ router.post("/auth/cookie/login", async (req, res) => {
   }
 });
 
+
 // GET Current User Profile (protected route)
 router.get("/auth/profile", authUser, async (req, res) => {
   const user = await User.findById(req.user.userId).select("-user_password");
@@ -146,7 +149,9 @@ router.post("/auth/logout", (req, res) => {
 
 // Verify JWT token
 router.get("/auth/verify", (req, res) => {
+
   const token = req.headers.authorization?.split(" ")[1];
+
   if (!token) {
     return res.status(401).json({ error: true, message: "Token is required" });
   }

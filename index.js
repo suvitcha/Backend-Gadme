@@ -1,12 +1,12 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { connectMongo } from "./config/mongo.js";
 import apiRoutes from "./api/routes/routes.js";
 import limiter from "./middleware/rateLimiter.js";
 import errorHandler from "./middleware/errorHandler.js";
+import helmet from "helmet";
 
 dotenv.config();
 
@@ -73,9 +73,9 @@ app.get("/", (_req, res) => {
       </head>
       <body>
         <div class="container">
-          <h1>📒 Welcome to the Notes API</h1>
-          <p>This is a simple REST API built with <strong>Express</strong> and <strong>LibSQL</strong>.</p>
-          <p>Try creating a note via <code>POST /notes</code> or explore routes like <code>/users</code> and <code>/notes-with-authors</code>.</p>
+          <h1>🎮 Welcome to the Backend of Gadme E-commerce 🎮</h1>
+          <p>This is a simple REST API built with <strong>Express</strong>.</p>
+          <p>Just creating a product via <code>POST /products</code> or explore routes like <code>/users</code>.</p>
           <p>Use a REST client like <em>VSCode REST Client</em> or <em>Postman</em> to interact.</p>
           <p>✨ Happy coding!</p>
         </div>
