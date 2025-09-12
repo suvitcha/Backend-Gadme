@@ -1,7 +1,8 @@
 import { Product } from "../../models/Product.js";
 
 export const getProductsByName = async (req, res, next) => {
-  const { product_name } = req.body;
+  const product_name = req.params.name;
+
   try {
     const products = await Product.find({
       product_name: product_name,

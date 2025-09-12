@@ -19,7 +19,7 @@ const CartSchema = new Schema(
     product_price: { type: Number, required: true, min: 0 },
     product_qty: { type: Number, required: true, min: 1 },
   },
-  { timestamps: true }
+  { _id: true, timestamps: true }
 );
 
 const AddressSchema = new Schema(
@@ -33,7 +33,7 @@ const AddressSchema = new Schema(
     address_province: { type: String, required: true, trim: true },
     address_postalcode: { type: String, required: true, trim: true },
   },
-  { timestamps: true }
+  { _id: true, timestamps: true }
 );
 
 const UserSchema = new Schema(
