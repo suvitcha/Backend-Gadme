@@ -1,12 +1,9 @@
 import { Product } from "../../models/Product.js";
 
 export const getProductsByName = async (req, res, next) => {
-  const product_name = req.params.name;
-
+  const { product_name } = req.params;
   try {
-    const products = await Product.find({
-      product_name: product_name,
-    }).sort({
+    const products = await Product.find({ product_name }).sort({
       createdAt: -1,
     });
 

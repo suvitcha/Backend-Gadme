@@ -7,7 +7,7 @@ import {
 
 const router = express.Router();
 
-router.get("/productdetail/:name", getProductsByName);
+router.get("/productdetail/:product_name", getProductsByName);
 
 router.get("/productlist", getAllProducts);
 
