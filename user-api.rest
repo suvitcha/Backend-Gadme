@@ -11,15 +11,15 @@ Content-Type: application/json
 
 }
 
-## User route - Signup a new user ✅
-POST http://localhost:3030/test/auth/signup
+### User route - Signup a new user ✅
+POST http://localhost:3030/auth/signup
 Content-Type: application/json
 
 {
-  "user_name": "Joseph",
+  "user_name": "joseph",
   "user_lastname": "Joestar",
   "user_username": "Carter123",
-  "user_email": "Joseph@example.com",
+  "user_email": "joseph@example.com",
   "user_password": "123456789"
 }
 
@@ -28,9 +28,9 @@ POST http://localhost:3030/auth/cookie/login
 Content-Type: application/json
 
 {
-  "user_email": "joseph@example.com",
+  "user_email": "nolan@example.com",
   "user_password": "123456789"
 }
 
 ### User route - Logout user
-POST http://localhost:3030/test/auth/logout
+POST http://localhost:3030/auth/logout

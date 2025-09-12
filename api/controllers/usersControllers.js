@@ -106,6 +106,8 @@ export const signupUser = async (req, res) => {
       user_password,
     });
     await user.save();
+
+    res.status(201).json({ error: false, message: "User signup successfully" });
   } catch (err) {
     return res.status(500).json({
       error: true,
