@@ -13,7 +13,7 @@ export const getAddress = async (req, res, next) => {
   // const userId = req.user?.id || req.user?._id || "TEST_USER";
 
   try {
-    const address = await Address.find({ userId: req.user._id }); // ไม่ได้ .sort({}) // หากจะ test โดยไม่ต้องใช้ token ให้ลบ : req.user._id ออก
+    const address = await Address.find();
     res.status(200).json({
       error: false,
       address,
@@ -33,32 +33,25 @@ export const createAddress = async (req, res, next) => {
   // const userId = req.user?.id || req.user?._id || "TEST_USER";
 
   const {
-    firstname,
-    lastname,
-    phonenumber,
-    roomnumber,
-    floor,
-    buildingname,
-    housenumber,
-    villagenumber,
-    villagename,
-    alley,
-    road,
-    subdistrict,
-    district,
-    province,
-    postalcode = [],
+    address_firstname,
+    address_lastname,
+    address_phonenumber,
+    address_address,
+    address_subdistrict,
+    address_district,
+    address_province,
+    address_postalcode = [],
   } = req.body;
 
   if (
-    !firstname ||
-    !lastname ||
-    !phonenumber ||
-    !road ||
-    !subdistrict ||
-    !district ||
-    !province ||
-    !postalcode
+    !address_firstname ||
+    !address_lastname ||
+    !address_phonenumber ||
+    !address_address ||
+    !address_subdistrict ||
+    !address_district ||
+    !address_province ||
+    !address_postalcode
   ) {
     const error = new Error("Your shipping details are required!");
     error.status = 400;
@@ -66,24 +59,23 @@ export const createAddress = async (req, res, next) => {
   }
 
   try {
-    const address = await Address.create({
-      userId,
-      firstname,
-      lastname,
-      phonenumber,
-      roomnumber,
-      floor,
-      buildingname,
-      housenumber,
-      villagenumber,
-      villagename,
-      alley,
-      road,
-      subdistrict,
-      district,
-      province,
-      postalcode,
-    });
+    const address = {
+      address_firstname,
+      address_lastname,
+      address_phonenumber,
+      address_address,
+      address_subdistrict,
+      address_district,
+      address_province,
+      address_postalcode,
+    };
+
+    const allAddress = await Address.findOneAndUpdate(
+      {},
+      { $push: { user_address: address } },
+      { new: true, upsert: true }
+    );
+
     res.status(201).json({
       error: false,
       address,
@@ -110,52 +102,43 @@ export const updateAddress = async (req, res, next) => {
   const addressId = req.params.id;
 
   const {
-    firstname,
-    lastname,
-    phonenumber,
-    roomnumber,
-    floor,
-    buildingname,
-    housenumber,
-    villagenumber,
-    villagename,
-    alley,
-    road,
-    subdistrict,
-    district,
-    province,
-    postalcode,
+    address_firstname,
+    address_lastname,
+    address_phonenumber,
+    address_address,
+    address_subdistrict,
+    address_district,
+    address_province,
+    address_postalcode,
   } = req.body;
 
   try {
-    const address = await Address.findOne({
-      _id: addressId,
-      userId: req.user._id, // หากจะ test โดยไม่ต้องใช้ token ให้เปลี่ยน userId: req.user._id, เป็น userId: userId, เพื่อให้ไปใช้ mock userId แทน
-    });
+    const allAddress = await Address.findOne({ "user_address._id": addressId });
 
-    if (!address) {
+    if (!allAddress) {
       const error = new Error("Address not found!");
       error.status = 404;
       return next(error);
     }
 
-    if (firstname) address.firstname = firstname;
-    if (lastname) address.lastname = lastname;
-    if (phonenumber) address.phonenumber = phonenumber;
-    if (roomnumber) address.roomnumber = roomnumber;
-    if (floor) address.floor = floor;
-    if (buildingname) address.buildingname = buildingname;
-    if (housenumber) address.housenumber = housenumber;
-    if (villagenumber) address.villagenumber = villagenumber;
-    if (villagename) address.villagename = villagename;
-    if (alley) address.alley = alley;
-    if (road) address.road = road;
-    if (subdistrict) address.subdistrict = subdistrict;
-    if (district) address.district = district;
-    if (province) address.province = province;
-    if (postalcode) address.postalcode = postalcode;
+    const address = allAddress.user_address.id(addressId);
 
-    await address.save();
+    if (!address) {
+      const error = new Error("This address not found in all address!");
+      error.status = 404;
+      return next(error);
+    }
+
+    if (address_firstname) address.address_firstname = address_firstname;
+    if (address_lastname) address.address_lastname = address_lastname;
+    if (address_phonenumber) address.address_phonenumber = address_phonenumber;
+    if (address_address) address.address_address = address_address;
+    if (address_subdistrict) address.address_subdistrict = address_subdistrict;
+    if (address_district) address.address_district = address_district;
+    if (address_province) address.address_province = address_province;
+    if (address_postalcode) address.address_postalcode = address_postalcode;
+
+    await allAddress.save();
     res.status(201).json({
       error: false,
       address,
@@ -182,18 +165,27 @@ export const deleteAddress = async (req, res, next) => {
   const addressId = req.params.id;
 
   try {
-    const address = await Address.findOne({
-      _id: addressId,
-      userId: req.user._id, // หากจะ test โดยไม่ต้องใช้ token ให้เปลี่ยน userId: req.user._id, เป็น userId: userId, เพื่อให้ไปใช้ mock userId แทน
-    });
+    const allAddress = await Address.findOne({ "user_address._id": addressId });
 
-    if (!address) {
+    if (!allAddress) {
       const error = new Error("Address not found!");
       error.status = 404;
       return next(error);
     }
 
-    await Address.deleteOne({ _id: addressId });
+    const address = allAddress.user_address.id(addressId);
+
+    if (!address) {
+      const error = new Error("This address not found in all address!");
+      error.status = 404;
+      return next(error);
+    }
+
+    await Address.updateOne(
+      { "user_address._id": addressId },
+      { $pull: { user_address: { _id: addressId } } }
+    );
+
     res.status(200).json({
       error: false,
       address,

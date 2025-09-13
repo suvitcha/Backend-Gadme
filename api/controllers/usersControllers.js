@@ -1,3 +1,4 @@
+
 import { User } from "../../models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -6,7 +7,7 @@ export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
       .select("-user_password")
-      .sort({ "-createdAt": -1 });
+      .sort({ createdAt: -1 });
     res.json({ error: false, users });
   } catch (err) {
     res.status(500).json({
@@ -19,6 +20,7 @@ export const getAllUsers = async (req, res) => {
 export const createUser = async (req, res) => {
   const { user_name, user_lastname, user_username, user_email, user_password } =
     req.body;
+
 
   if (!user_name) {
     return res.status(400).json({ error: true, message: "Name is required" });
@@ -72,6 +74,7 @@ export const createUser = async (req, res) => {
     return res
       .status(500)
       .json({ error: true, message: "server error", details: err.message });
+
   }
 };
 
@@ -116,6 +119,7 @@ export const signupUser = async (req, res) => {
       message: "server error",
       details: err.message,
     });
+
   }
 };
 

@@ -8,6 +8,7 @@ const UserSchema = new Schema(
     user_username: { type: String, default: "" },
     user_email: { type: String, required: true },
     user_password: { type: String, required: true },
+
     user_role: { type: String, enum: ["User", "Admin"], default: "User" },
     user_cart: [
       {
@@ -15,6 +16,7 @@ const UserSchema = new Schema(
         product_status: {
           type: String,
           enum: ["Selected", "Checkout"],
+
           default: "Selected",
         },
         product_name: { type: String, required: true },
@@ -22,6 +24,7 @@ const UserSchema = new Schema(
         product_color: { type: String, required: true },
         product_price: { type: Number, required: true },
         product_qty: { type: Number, required: true },
+
         addedOn: { type: Date, default: new Date().getTime() },
       },
     ],
@@ -31,8 +34,10 @@ const UserSchema = new Schema(
 
 //Hash password before saving to DB
 UserSchema.pre("save", async function (next) {
+
   if (!this.isModified("user_password")) return next();
   this.user_password = await bcrypt.hash(this.user_password, 10);
+
   next();
 });
 
