@@ -4,7 +4,6 @@ import { User } from "../../models/User.js";
 export const getCartByUser = async (req, res, next) => {
   try {
     const user = await User.findOne();
-    console.log(user);
     res.status(200).json({
       error: false,
       user: user,
@@ -16,9 +15,9 @@ export const getCartByUser = async (req, res, next) => {
 };
 
 export const addCartItem = async (req, res, next) => {
-  const id = "68c411b52e822abad46f8334";
+  const userId = "68c411b52e822abad46f8334";
   try {
-    const { _id } = new mongoose.Types.ObjectId(id);
+    const { _id } = new mongoose.Types.ObjectId(userId);
     const {
       product_id,
       product_name,
@@ -43,11 +42,8 @@ export const addCartItem = async (req, res, next) => {
         .json({ error: true, message: "Missing cart item fields" });
     }
 
-    // แคสต์ product_id ให้เป็น ObjectId
-    const pid = new mongoose.Types.ObjectId(id);
-    console.log(_id);
+    const pid = new mongoose.Types.ObjectId(userId);
     const user = await User.findById({ _id });
-    console.log(user);
     if (!user)
       return res.status(404).json({ error: true, message: "User not found" });
 
@@ -68,5 +64,31 @@ export const addCartItem = async (req, res, next) => {
   } catch (err) {
     // ถ้า product_id ไม่ใช่ 24 hex จะโยน BSONError
     next(err);
+  }
+};
+
+export const countCartByUser = async (req, res, next) => {
+  const userId = new mongoose.Types.ObjectId("68c411b52e822abad46f8334");
+  try {
+    //const user_id = req.user._id;
+    const total = await User.aggregate([
+      { $match: { _id: userId } },
+      { $unwind: "$user_cart" },
+      { $match: { "user_cart.product_status": "Selected" } },
+      { $group: { _id: null, totalQty: { $sum: "$user_cart.product_qty" } } },
+    ]);
+    res.json({ error: false, count: total });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteCart = async (req, res, next) => {
+  const userId = new mongoose.Types.ObjectId("68c411b52e822abad46f8334");
+  try {
+    await User.updateOne({ _id: userId }, { $set: { user_cart: [] } });
+    return res.json({ error: false, message: "Cart cleared", count: 0 });
+  } catch (e) {
+    next(e);
   }
 };
