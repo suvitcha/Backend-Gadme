@@ -1,9 +1,6 @@
 import express from "express";
 import { Order } from "../../models/Order.js";
 
-
-const router = express.Router();
-
 // postOrder
 export const postOrder = async (req, res, next) => {
   try {
