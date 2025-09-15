@@ -5,7 +5,7 @@ import productUserRoutes from "./productUserRoutes.js";
 import cartRoutes from "./cartRoutes.js";
 
 import userRoutes from "./userRoutes.js";
-
+import orderRoutes from "./orderRoutes.js";
 // import { authUser } from "../../middleware/auth.js"
 
 export default () => {
@@ -18,6 +18,7 @@ export default () => {
   router.use("/", productUserRoutes);
   router.use("/", cartRoutes);
   router.use("/", userRoutes);
+  router.use("/", orderRoutes);
 
   return router;
 };
