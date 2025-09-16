@@ -1,13 +1,18 @@
 import express from "express";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { User } from "../../models/User.js";
 import {
+  adminDashboard,
+  cookieLogin,
   createUser,
   getAllUsers,
+  getUserProfile,
+  loginUser,
+  logoutUser,
   signupUser,
+  verifyToken,
 } from "../controllers/usersControllers.js";
-import { authUser } from "../../middleware/auth.js";
+import { authRoles, authUser } from "../../middleware/auth.js";
 
 const router = express.Router();
 
@@ -20,149 +25,82 @@ router.post("/users", createUser);
 router.post("/auth/signup", signupUser);
 
 //login a user - jwt signed token
-router.post("/auth/login", async (req, res) => {
-  const { user_email, user_password } = req.body;
-
-  if (!user_email || !user_password) {
-    return res
-      .status(400)
-      .json({ error: true, message: "Email and password are required" });
-  }
-
-  try {
-    const user = await User.findOne({ user_email });
-    if (!user) {
-      return res
-        .status(401)
-        .json({ error: true, message: "Invalid credentials" });
-    }
-
-    const isMatch = await bcrypt.compare(user_password, user.user_password);
-    if (!isMatch) {
-      return res
-        .status(401)
-        .json({ error: true, message: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-      { userId: user._id, role: user.user_role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-    res.json({ error: false, token, message: "Login successful" });
-  } catch (err) {
-    return res
-      .status(500)
-      .json({ error: true, message: "server error", details: err.message });
-  }
-});
+router.post("/auth/login", loginUser);
 
 //Login a user - jwt signed token
-router.post("/auth/cookie/login", async (req, res) => {
-  console.log(">>> HIT /auth/cookie/login - body:", req.body);
-  const { user_email, user_password } = req.body;
+router.post("/auth/cookie/login", cookieLogin);
 
-  if (!user_email || !user_password) {
-    console.log("Missing email/password", req.body);
-    return res
-      .status(400)
-      .json({ error: true, message: "Email and Password are required" });
-  }
+// // GET Current User Profile (protected route)
+// router.get("/auth/profile", authUser, async (req, res) => {
+//   const user = await User.findById(req.user.userId).select("-user_password");
+//   if (!user) {
+//     return res.status(404).json({ error: true, message: "User not found" });
+//   }
 
-  try {
-    const user = await User.findOne({ user_email });
-    console.log("Found user:", !!user, user?._id);
-    if (!user) {
-      return res
-        .status(401)
-        .json({ error: true, message: "Invalid credentials" });
-    }
+//   res.status(200).json({ error: false, user });
+// });
 
-    const isMatch = await bcrypt.compare(user_password, user.user_password);
-    if (!isMatch) {
-      return res.status(401).json({
-        error: true,
-        message: "Invalid credentials",
-      });
-    }
+// Profile route - Logged-in user by role (User or Admin) (Protected route)
+router.get("/auth/profile", authUser, getUserProfile);
 
-    // Create JWT token
-    const token = jwt.sign(
-      { userId: user._id, role: user.user_role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" } // Token expires in 1 hour
-    );
+// Admin Dashboard route - accessible to users with 'Admin' role
+router.get("/admin/dashboard", authUser, authRoles("Admin"), adminDashboard);
 
-    const isProd = process.env.NODE_ENV === "production";
+// // Admin route - accessible to users with 'Admin' role ⌛waiting to test
+// router.get("/admin", authUser, authRoles("Admin"), (req, res) => {
+//   res.status(200).json({ message: "Welcome, Admin!" });
+// });
 
-    res.cookie("accessToken", token, {
-      httpOnly: true,
-      secure: isProd, // only send over HTTPS in production
-      sameSite: isProd ? "none" : "lax", // adjust based on your client-server setup
-      path: "/",
-      maxAge: 60 * 60 * 1000, // 1 hour
-    });
+// // User route - accessible to users with 'User' role ⌛waiting to test
+// router.get("/User", authUser, authRoles("User"), (req, res) => {
+//   res.status(200).json({ message: "Welcome, User!" });
+// });
 
-    res.status(200).json({
-      error: false,
-      message: "Login successful",
-      user: {
-        _id: user._id,
-        user_name: user.user_name,
-        user_lastname: user.user_lastname,
-        user_email: user.user_email,
-        user_username: user.user_username,
-        user_role: user.user_role,
-      }, // send some safe public user info if needed
-    });
-  } catch (err) {
-    res.status(500).json({
-      error: true,
-      message: "Server error",
-      details: err.message,
-    });
-  }
-});
+// // Profile route User (Protected route)
+// router.get(
+//   "/auth/profile/user",
+//   authUser,
+//   authRoles("User"),
+//   async (req, res) => {
+//     const user = await User.findById(req.user.userId).select("-user_password");
+//     if (!user) {
+//       return res.status(404).json({
+//         error: true,
+//         message: "User not found",
+//       });
+//     }
+//     res.status(200).json({
+//       error: false,
+//       message: `Hello User ${req.user._id}`,
+//     });
+//   }
+// );
 
-// GET Current User Profile (protected route)
-router.get("/auth/profile", authUser, async (req, res) => {
-  const user = await User.findById(req.user.userId).select("-user_password");
-  if (!user) {
-    return res.status(404).json({ error: true, message: "User not found" });
-  }
-
-  res.status(200).json({ error: false, user });
-});
+// // Profile route Admin (Protected route)
+// router.get(
+//   "/auth/profile/admin",
+//   authUser,
+//   authRoles("Admin"),
+//   async (req, res) => {
+//     const admin = await User.findById(req.user.userId).select("-user_password");
+//     if (!admin) {
+//       return res.status(404).json({
+//         error: true,
+//         message: "Admin not found",
+//       });
+//     }
+//     res.status(200).json({
+//       error: false,
+//       message: `Hello Admin ${req.user._id}`,
+//     });
+//   }
+// );
 
 //Logout user - clear cookie
-router.post("/auth/logout", (req, res) => {
-  res.clearCookie("accessToken", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  });
-  res.status(200).json({ message: "Logged out successfully" });
-});
+router.post("/auth/logout", logoutUser);
 
 // Verify JWT token
-router.get("/auth/verify", (req, res) => {
-  const token = req.headers.authorization?.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ error: true, message: "Token is required" });
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({
-      error: false,
-      userId: decoded.userId,
-      role: decoded.role,
-      message: "Token is valid",
-    });
-  } catch (err) {
-    return res.status(401).json({ error: true, message: "Invalid token" });
-  }
-});
+router.get("/auth/verify", verifyToken);
 
 // ❌ Use after implementing auth
 // Create User account

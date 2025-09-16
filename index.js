@@ -30,8 +30,8 @@ const corsOptions = {
 //make cors allow frontend request
 app.use(cors(corsOptions));
 app.use(limiter);
-app.use(express.json());
 app.use(cookieParser());
+app.use(express.json());
 
 // Centralized routes
 app.use("/", apiRoutes());
