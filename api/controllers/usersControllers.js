@@ -219,8 +219,6 @@ export const cookieLogin = async (req, res) => {
         .json({ error: true, message: "Invalid credentials" });
 
     const isMatch = await bcrypt.compare(user_password, user.user_password);
-    console.log("Compare:", user_password, "<>", user.user_password);
-    console.log("Match result:", isMatch);
     if (!isMatch) {
       return res.status(401).json({
         error: true,
