@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { User } from "../../models/User.js";
 
+/* function */
 function computeCartSummary(cartItems = []) {
   const count = cartItems.reduce((s, i) => s + Number(i?.product_qty || 0), 0);
   const subtotal = cartItems.reduce((s, i) => {
@@ -26,6 +27,8 @@ async function readUserCart(userId) {
   const { count, subtotal } = computeCartSummary(cartItems);
   return { cartItems, count, subtotal };
 }
+
+/* function */
 
 export const getCartByUser = async (req, res, next) => {
   try {
@@ -67,9 +70,9 @@ export const getCartByUser = async (req, res, next) => {
 };
 
 export const addCartItem = async (req, res, next) => {
-  const userId = "68c411b52e822abad46f8334";
+  const userId = new mongoose.Types.ObjectId("68c411b52e822abad46f8334");
+  const _id = userId;
   try {
-    const { _id } = new mongoose.Types.ObjectId(userId);
     const {
       product_id,
       product_name,
