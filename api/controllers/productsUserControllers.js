@@ -4,7 +4,8 @@ export const getProductsByName = async (req, res, next) => {
   const { product_name } = req.params;
   try {
     const products = await Product.find({ product_name }).sort({
-      createdAt: -1,
+      product_price: 1,
+      _id: 1,
     });
 
     res.status(200).json({
@@ -20,17 +21,19 @@ export const getProductsByName = async (req, res, next) => {
 export const getAllProducts = async (req, res, next) => {
   try {
     const products = await Product.aggregate([
+      { $sort: { product_name: 1, product_price: 1, _id: 1 } },
       {
         $group: {
           _id: "$product_name",
+          id: { $first: "$_id" },
+          product_image: { $first: "$product_image" }, // รูปของตัวถูกสุด
+          minPrice: { $first: "$product_price" },
           product_brand: { $first: "$product_brand" },
           product_category: { $first: "$product_category" },
           product_tag: { $first: "$product_tag" },
-          product_image: { $first: "$product_image" },
-          minPrice: { $min: "$product_price" },
         },
       },
-      { $sort: { _id: 1 } },
+      { $sort: { minPrice: 1, _id: 1 } },
     ]);
 
     res.status(200).json({

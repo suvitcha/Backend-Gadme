@@ -3,7 +3,11 @@ import { Schema, model } from "mongoose";
 // subschema: order_items
 const OrderItemSchema = new Schema(
   {
-    product_id: { type: String, required: true },
+    product_id: {
+      type: Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
     product_name: { type: String, required: true },
     product_image: { type: String },
     product_color: { type: String },
@@ -49,7 +53,11 @@ const PaymentSchema = new Schema(
 // main schema
 const OrderSchema = new Schema(
   {
-    user_id: { type: String, required: true },
+    user_id: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
     order_subtotal: { type: Number, required: true },
     order_shippingFee: { type: Number, default: 0 },
