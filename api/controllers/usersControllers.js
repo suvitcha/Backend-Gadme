@@ -1,4 +1,3 @@
-
 import { User } from "../../models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -20,7 +19,6 @@ export const getAllUsers = async (req, res) => {
 export const createUser = async (req, res) => {
   const { user_name, user_lastname, user_username, user_email, user_password } =
     req.body;
-
 
   if (!user_name) {
     return res.status(400).json({ error: true, message: "Name is required" });
@@ -74,7 +72,6 @@ export const createUser = async (req, res) => {
     return res
       .status(500)
       .json({ error: true, message: "server error", details: err.message });
-
   }
 };
 
@@ -119,11 +116,11 @@ export const signupUser = async (req, res) => {
       message: "server error",
       details: err.message,
     });
-
   }
 };
 
 export const loginUser = async (req, res) => {
+  console.log(req.body);
   const { user_email, user_password } = req.body;
 
   if (!user_email || !user_password) {
@@ -198,51 +195,51 @@ export const adminDashboard = async (req, res) => {
 
 // Login user with cookies
 export const cookieLogin = async (req, res) => {
-  console.log(">>> HIT /auth/cookie/login - body:", req.body);
-  const { user_email, user_password } = req.body;
+  const { user_email, user_password } = req.body || {};
 
   if (!user_email || !user_password) {
-    console.log("Missing email/password", req.body);
     return res
       .status(400)
       .json({ error: true, message: "Email and Password are required" });
   }
+  if (!process.env.JWT_SECRET) {
+    return res
+      .status(500)
+      .json({ error: true, message: "Server misconfigured" });
+  }
 
   try {
-    const user = await User.findOne({ user_email });
-    console.log("Found user:", !!user, user?._id);
-    if (!user) {
+    const email = user_email.trim().toLowerCase();
+    const user = await User.findOne({ user_email: email }).select(
+      "+user_password +user_role"
+    );
+    if (!user)
       return res
         .status(401)
         .json({ error: true, message: "Invalid credentials" });
-    }
 
-    const isMatch = await bcrypt.compare(user_password, user.user_password);
-    if (!isMatch) {
-      return res.status(401).json({
-        error: true,
-        message: "Invalid credentials",
-      });
-    }
+    const ok = await bcrypt.compare(user_password, user.user_password);
+    if (!ok)
+      return res
+        .status(401)
+        .json({ error: true, message: "Invalid credentials" });
 
-    // Create JWT token
     const token = jwt.sign(
       { userId: user._id, role: user.user_role },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" } // Token expires in 1 hour
+      { expiresIn: "1h" }
     );
 
     const isProd = process.env.NODE_ENV === "production";
-
     res.cookie("accessToken", token, {
       httpOnly: true,
-      secure: isProd, // only send over HTTPS in production
-      sameSite: isProd ? "none" : "lax", // adjust based on your client-server setup
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       path: "/",
-      maxAge: 60 * 60 * 1000, // 1 hour
+      maxAge: 60 * 60 * 1000, // 1h
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       error: false,
       message: "Login successful",
       user: {
@@ -252,14 +249,12 @@ export const cookieLogin = async (req, res) => {
         user_email: user.user_email,
         user_username: user.user_username,
         user_role: user.user_role,
-      }, // send some safe public user info if needed
+      },
     });
   } catch (err) {
-    res.status(500).json({
-      error: true,
-      message: "Server error",
-      details: err.message,
-    });
+    return res
+      .status(500)
+      .json({ error: true, message: "Server error", details: err.message });
   }
 };
 
@@ -285,8 +280,9 @@ export const verifyToken = (req, res) => {
 export const logoutUser = (req, res) => {
   res.clearCookie("accessToken", {
     httpOnly: true,
+    sameSite: "lax", // ต้อง "ตรง" กับตอนตั้ง
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    path: "/", // ต้อง "ตรง" กับตอนตั้ง
   });
-  res.status(200).json({ message: "Logged out successfully" });
+  return res.status(200).json({ message: "Logged out successfully" });
 };
