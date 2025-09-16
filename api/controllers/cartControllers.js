@@ -1,18 +1,27 @@
+// api/controllers/cartControllers.js
 import mongoose from "mongoose";
 import { User } from "../../models/User.js";
+import { Product } from "../../models/Product.js";
+
+/* ------------------------------ Helpers ------------------------------ */
 
 function computeCartSummary(cartItems = []) {
-  const count = cartItems.reduce((s, i) => s + Number(i?.product_qty || 0), 0);
-  const subtotal = cartItems.reduce((s, i) => {
+  const selected = cartItems.filter((it) => it.product_status === "Selected");
+  const count_items = selected.reduce(
+    (s, i) => s + Number(i?.product_qty || 0),
+    0
+  );
+  const count_lines = selected.length;
+  const subtotal = selected.reduce((s, i) => {
     const p =
       i?.product_id && typeof i.product_id === "object" ? i.product_id : null;
     const price = Number(i?.product_price ?? p?.product_price ?? 0);
     return s + price * Number(i?.product_qty || 0);
   }, 0);
-  return { count, subtotal };
+  return { count_items, count_lines, subtotal };
 }
 
-async function readUserCart(userId) {
+export async function readUserCart(userId) {
   const user = await User.findById(userId)
     .select("user_cart")
     .populate({
@@ -23,41 +32,56 @@ async function readUserCart(userId) {
     .lean();
 
   const cartItems = user?.user_cart ?? [];
-  const { count, subtotal } = computeCartSummary(cartItems);
-  return { cartItems, count, subtotal };
+  const meta = computeCartSummary(cartItems);
+  return { cartItems, ...meta };
 }
 
+export async function getCartMeta(userId) {
+  const _id = new mongoose.Types.ObjectId(userId);
+  const r = await User.aggregate([
+    { $match: { _id } },
+    { $unwind: { path: "$user_cart", preserveNullAndEmptyArrays: true } },
+    { $match: { "user_cart.product_status": "Selected" } },
+    {
+      $group: {
+        _id: null,
+        count_items: { $sum: { $ifNull: ["$user_cart.product_qty", 0] } },
+        count_lines: { $sum: 1 },
+        subtotal: {
+          $sum: {
+            $multiply: [
+              { $ifNull: ["$user_cart.product_price", 0] },
+              { $ifNull: ["$user_cart.product_qty", 0] },
+            ],
+          },
+        },
+      },
+    },
+  ]);
+  return {
+    count_items: r?.[0]?.count_items ?? 0,
+    count_lines: r?.[0]?.count_lines ?? 0,
+    subtotal: r?.[0]?.subtotal ?? 0,
+  };
+}
+
+// ดึง userId จาก auth (ถ้ามี) หรือ fallback (สำหรับ dev)
+const resolveUserId = (req) => req.user?._id || "68c411b52e822abad46f8334";
+
+/* ------------------------------ Controllers ------------------------------ */
+
+// GET /cart
 export const getCartByUser = async (req, res, next) => {
   try {
-    const userId = new mongoose.Types.ObjectId("68c411b52e822abad46f8334");
-    // const userId = req.user?.id; // มาจาก middleware JWT เช่น decode token
-
-    const user = await User.findById(userId)
-      .select("user_cart")
-      .populate({
-        path: "user_cart.product_id",
-        model: "Product",
-        select:
-          "product_id product_name product_image product_price product_color stock", // _id จะติดมาด้วยอยู่แล้ว เว้นแต่สั่ง -_id
-      })
-      .lean();
-
-    if (!user) {
-      return res.status(404).json({ error: true, message: "User not found" });
-    }
-
-    const cartItems = user.user_cart ?? [];
-    const count = cartItems.reduce((s, i) => s + (i.product_qty || 0), 0);
-    // รองรับทั้งกรณีเก็บราคาในรายการ cart เอง และกรณีต้องอ่านจาก product ที่ populate มา
-    const subtotal = cartItems.reduce((s, i) => {
-      const price = i.product_price ?? i.product_id?.product_price ?? 0;
-      return s + price * (i.product_qty || 0);
-    }, 0);
+    const userId = new mongoose.Types.ObjectId(resolveUserId(req));
+    const { cartItems, count_items, count_lines, subtotal } =
+      await readUserCart(userId);
 
     return res.status(200).json({
       error: false,
       cartItems,
-      count,
+      count_items,
+      count_lines,
       subtotal,
       message: "Get cart successfully!",
     });
@@ -66,90 +90,117 @@ export const getCartByUser = async (req, res, next) => {
   }
 };
 
-export const addCartItem = async (req, res, next) => {
-  const userId = "68c411b52e822abad46f8334";
+// GET /cart/meta   → ใช้ sync badge/navbar ทีเดียว 2 ค่า
+export const getCartMetaHandler = async (req, res, next) => {
   try {
-    const { _id } = new mongoose.Types.ObjectId(userId);
-    const {
-      product_id,
-      product_name,
-      product_image,
-      product_color,
-      product_price,
-      product_qty,
-      product_status, // optional (default: "Selected")
-    } = req.body;
-
-    // ตรวจ required fields ให้ครบ
-    if (
-      !product_id ||
-      !product_name ||
-      !product_image ||
-      !product_color ||
-      product_price == null ||
-      product_qty == null
-    ) {
-      return res
-        .status(400)
-        .json({ error: true, message: "Missing cart item fields" });
-    }
-
-    const pid = new mongoose.Types.ObjectId(product_id);
-    const user = await User.findById({ _id });
-    if (!user)
-      return res.status(404).json({ error: true, message: "User not found" });
-
-    user.user_cart.push({
-      product_id: pid,
-      product_name,
-      product_image,
-      product_color,
-      product_price,
-      product_qty,
-      product_status: product_status || "Selected",
-    });
-
-    await user.save(); // ไม่ re-hash password เพราะ isModified("user_password") เป็น false
-    return res
-      .status(201)
-      .json({ error: false, cart: user.user_cart, message: "Added to cart" });
-  } catch (err) {
-    // ถ้า product_id ไม่ใช่ 24 hex จะโยน BSONError
-    next(err);
-  }
-};
-
-export const countCartByUser = async (req, res, next) => {
-  const userId = new mongoose.Types.ObjectId("68c411b52e822abad46f8334");
-  try {
-    //const user_id = req.user._id;
-    const total = await User.aggregate([
-      { $match: { _id: userId } },
-      { $unwind: "$user_cart" },
-      { $match: { "user_cart.product_status": "Selected" } },
-      { $group: { _id: null, totalQty: { $sum: "$user_cart.product_qty" } } },
-    ]);
-    res.json({ error: false, count: total });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const deleteCart = async (req, res, next) => {
-  const userId = new mongoose.Types.ObjectId("68c411b52e822abad46f8334");
-  try {
-    await User.updateOne({ _id: userId }, { $set: { user_cart: [] } });
-    return res.json({ error: false, message: "Cart cleared", count: 0 });
+    const userId = resolveUserId(req);
+    const meta = await getCartMeta(userId);
+    // เพื่อรองรับโค้ดเดิมที่อ่าน field "count"
+    return res.json({ error: false, count: meta.count_items, ...meta });
   } catch (e) {
     next(e);
   }
 };
 
+// GET /cart/count  → backward compatible (นับ “ชิ้นรวม”)
+export const countCartByUser = async (req, res, next) => {
+  try {
+    const userId = resolveUserId(req);
+    const meta = await getCartMeta(userId);
+    return res.json({ error: false, count: meta.count_items, ...meta });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const addCartItem = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const userId = resolveUserId(req);
+    const _id = new mongoose.Types.ObjectId(userId);
+
+    const {
+      product_id,
+      product_color,
+      product_qty = 1,
+      product_status,
+    } = req.body;
+    if (!product_id || !product_color) {
+      await session.abortTransaction();
+      session.endSession();
+      return res
+        .status(400)
+        .json({ error: true, message: "Missing product_id or product_color" });
+    }
+
+    const pid = new mongoose.Types.ObjectId(product_id);
+    const qty = Math.max(1, parseInt(product_qty, 10) || 1);
+
+    const prod = await Product.findById(pid)
+      .select("product_name product_image product_price product_color stock")
+      .lean()
+      .session(session);
+    if (!prod) {
+      await session.abortTransaction();
+      session.endSession();
+      return res
+        .status(404)
+        .json({ error: true, message: "Product not found" });
+    }
+
+    const incRes = await User.updateOne(
+      {
+        _id,
+        "user_cart.product_id": pid,
+        "user_cart.product_color": product_color,
+      },
+      {
+        $inc: { "user_cart.$.product_qty": qty },
+        $set: { "user_cart.$.product_status": product_status || "Selected" },
+      },
+      { session }
+    );
+
+    if (incRes.matchedCount === 0) {
+      const newItem = {
+        product_id: pid,
+        product_status: product_status || "Selected",
+        product_name: prod.product_name,
+        product_image: prod.product_image,
+        product_color,
+        product_price: prod.product_price,
+        product_qty: qty,
+      };
+      await User.updateOne(
+        { _id },
+        { $push: { user_cart: newItem } },
+        { session }
+      );
+    }
+
+    // ✅ commit ก่อน แล้วค่อยอ่าน meta (จะได้ค่าปัจจุบันแน่นอน)
+    await session.commitTransaction();
+    session.endSession();
+
+    const meta = await getCartMeta(userId); // {count_items, count_lines, subtotal}
+    return res.status(201).json({
+      error: false,
+      message: incRes.matchedCount ? "Increased quantity" : "Added to cart",
+      ...meta,
+      count: meta.count_items, // เผื่อ FE เก่า
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    next(err);
+  }
+};
+
+// PUT /cart/:itemId  (set absolute qty)
 export const productQty = async (req, res, next) => {
   try {
-    const userId = new mongoose.Types.ObjectId("68c411b52e822abad46f8334");
-    // const userId = resolveUserId(req);
-
+    const userId = new mongoose.Types.ObjectId(resolveUserId(req));
     const { itemId } = req.params;
     const { product_qty } = req.body;
 
@@ -165,21 +216,21 @@ export const productQty = async (req, res, next) => {
         .json({ error: true, message: "product_qty must be a number >= 1" });
     }
 
-    // (Optional) Check stock limit if Product has stock field
-    const userDoc = await User.findOne({
-      _id: userId,
-      "user_cart._id": itemId,
-    }).select("user_cart.$");
-    if (!userDoc)
+    const found = await User.findOne(
+      { _id: userId, "user_cart._id": itemId },
+      { "user_cart.$": 1 }
+    ).lean();
+    if (!found) {
       return res
         .status(404)
         .json({ error: true, message: "Cart item not found" });
-    const item = userDoc.user_cart?.[0];
+    }
 
+    const item = found.user_cart?.[0];
     if (item?.product_id) {
-      const prodId = item.product_id?._id || item.product_id; // works for ObjectId or populated object
+      const prodId = item.product_id._id || item.product_id;
       try {
-        const prod = await Product.findById(prodId).select("stock");
+        const prod = await Product.findById(prodId).select("stock").lean();
         if (prod?.stock != null && qty > prod.stock) {
           return res
             .status(400)
@@ -188,35 +239,121 @@ export const productQty = async (req, res, next) => {
       } catch {}
     }
 
-    await User.updateOne(
+    const upd = await User.updateOne(
       { _id: userId, "user_cart._id": itemId },
-      { $set: { "user_cart.$.product_qty": qty } }
+      {
+        $set: {
+          "user_cart.$.product_qty": qty,
+          "user_cart.$.product_status": "Selected",
+        },
+      }
     );
+    if (upd.matchedCount === 0) {
+      return res
+        .status(404)
+        .json({ error: true, message: "Cart item not found" });
+    }
 
-    const { cartItems, count, subtotal } = await readUserCart(userId);
-    return res.json({
-      error: false,
-      cartItems,
-      count,
-      subtotal,
-      message: "Updated quantity",
-    });
+    const meta = await getCartMeta(userId);
+    return res.json({ error: false, message: "Quantity updated", ...meta });
   } catch (err) {
-    console.error("PUT /cart/:itemId error", err);
-    return res
-      .status(500)
-      .json({ error: true, message: "Internal server error" });
+    next(err);
   }
 };
 
+// PATCH /cart/:itemId/increase?step=1
+export const increaseCartItemQty = async (req, res, next) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(resolveUserId(req));
+    const { itemId } = req.params;
+    const step = Math.max(1, Number(req.query.step) || 1);
+
+    if (!mongoose.isValidObjectId(itemId)) {
+      return res
+        .status(400)
+        .json({ error: true, message: "Invalid cart item id" });
+    }
+
+    // optional: check stock
+    const found = await User.findOne(
+      { _id: userId, "user_cart._id": itemId },
+      { "user_cart.$": 1 }
+    ).lean();
+    if (!found)
+      return res
+        .status(404)
+        .json({ error: true, message: "Cart item not found" });
+
+    const item = found.user_cart?.[0];
+    if (item?.product_id) {
+      const prodId = item.product_id._id || item.product_id;
+      const prod = await Product.findById(prodId).select("stock").lean();
+      if (prod?.stock != null && item.product_qty + step > prod.stock) {
+        return res
+          .status(400)
+          .json({ error: true, message: `จำนวนเกิน Stock (${prod.stock})` });
+      }
+    }
+
+    await User.updateOne(
+      { _id: userId, "user_cart._id": itemId },
+      {
+        $inc: { "user_cart.$.product_qty": step },
+        $set: { "user_cart.$.product_status": "Selected" },
+      }
+    );
+
+    const meta = await getCartMeta(userId);
+    return res.json({ error: false, message: "Increased", ...meta });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /cart/:itemId/decrease?step=1
+export const decreaseCartItemQty = async (req, res, next) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(resolveUserId(req));
+    const { itemId } = req.params;
+    const step = Math.max(1, Number(req.query.step) || 1);
+
+    if (!mongoose.isValidObjectId(itemId)) {
+      return res
+        .status(400)
+        .json({ error: true, message: "Invalid cart item id" });
+    }
+
+    // ลด แล้วไม่ให้ต่ำกว่า 1
+    const doc = await User.findOne(
+      { _id: userId, "user_cart._id": itemId },
+      { "user_cart.$": 1 }
+    ).lean();
+    if (!doc)
+      return res
+        .status(404)
+        .json({ error: true, message: "Cart item not found" });
+
+    const cur = Number(doc.user_cart?.[0]?.product_qty || 1);
+    const nextQty = Math.max(1, cur - step);
+
+    await User.updateOne(
+      { _id: userId, "user_cart._id": itemId },
+      { $set: { "user_cart.$.product_qty": nextQty } }
+    );
+
+    const meta = await getCartMeta(userId);
+    return res.json({ error: false, message: "Decreased", ...meta });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /cart/:itemId
 export const deleteCartById = async (req, res, next) => {
   try {
-    const userId = new mongoose.Types.ObjectId("68c411b52e822abad46f8334");
-    // const userId = resolveUserId(req);
-    // if (!userId)
-    //   return res.status(401).json({ error: true, message: "Unauthorized" });
-
+    const userId = new mongoose.Types.ObjectId(resolveUserId(req));
     const { itemId } = req.params;
+
     if (!mongoose.isValidObjectId(itemId)) {
       return res
         .status(400)
@@ -228,12 +365,13 @@ export const deleteCartById = async (req, res, next) => {
       { $pull: { user_cart: { _id: itemId } } }
     );
 
-    const { cartItems, count, subtotal } = await readUserCart(userId);
+    const { cartItems } = await readUserCart(userId);
+    const meta = computeCartSummary(cartItems);
+
     return res.json({
       error: false,
       cartItems,
-      count,
-      subtotal,
+      ...meta, // {count_items, count_lines, subtotal}
       message: "Removed item",
     });
   } catch (err) {
@@ -241,5 +379,24 @@ export const deleteCartById = async (req, res, next) => {
     return res
       .status(500)
       .json({ error: true, message: "Internal server error" });
+  }
+};
+
+// DELETE /cart
+export const deleteCart = async (req, res, next) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(resolveUserId(req));
+    await User.updateOne({ _id: userId }, { $set: { user_cart: [] } });
+
+    return res.json({
+      error: false,
+      message: "Cart cleared",
+      count_items: 0,
+      count_lines: 0,
+      subtotal: 0,
+      count: 0, // backward compat
+    });
+  } catch (e) {
+    next(e);
   }
 };
