@@ -1,9 +1,17 @@
 import express from "express";
-
-import { getOrderById } from "../controllers/ordersController.js";
+import { authUser } from "../../middleware/auth.js";
+import {
+  getCheckoutCart,
+  createOrderFromCart,
+  getOrderById,
+  updateOrderPayment,
+} from "../controllers/ordersController.js";
 
 const router = express.Router();
 
-router.get("/order", getOrderById);
+router.get("/orders/cart", authUser, getCheckoutCart);
+router.post("/orders", authUser, createOrderFromCart);
+router.get("/orders/:orderId", authUser, getOrderById);
+router.patch("/orders/:orderId/payment", authUser, updateOrderPayment);
 
 export default router;
